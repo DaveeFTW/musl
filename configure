@@ -311,6 +311,7 @@ printf "%s\n" "$target"
 #
 case "$target" in
 # Catch these early to simplify matching for 32-bit archs
+arm-vita*) ARCH=vita ;;
 arm*) ARCH=arm ;;
 aarch64*) ARCH=aarch64 ;;
 i?86-nt32*) ARCH=nt32 ;;
@@ -601,7 +602,7 @@ if test "$ARCH" = "x86_64" ; then
 trycppif __ILP32__ "$t" && ARCH=x32
 fi
 
-if test "$ARCH" = "arm" ; then
+if test "$ARCH" = "arm" || test "$ARCH" = "vita"; then
 if trycppif __thumb2__ "$t" ; then
 tryflag CFLAGS_AUTO -Wa,-mimplicit-it=always
 tryflag CFLAGS_AUTO -Wa,-mthumb
