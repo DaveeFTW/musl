@@ -12,6 +12,8 @@ void _fini() __attribute__((weak));
 _Noreturn int __libc_start_main(int (*)(), int, char **,
         void (*)(), void(*)(), void(*)());
 
+void _init_vita_io(void);
+
 static inline int _strlen(const char *str)
 {
     const char *beg = str;
@@ -37,5 +39,6 @@ void _start_vita_c(unsigned int args, char *argp)
     }
 
     argv[argc] = 0;
+    _init_vita_io();
     __libc_start_main(main, argc, argv, _init, _fini, 0);
 }
