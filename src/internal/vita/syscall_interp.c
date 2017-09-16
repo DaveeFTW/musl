@@ -3,6 +3,7 @@
 
 #include "tls.h"
 #include "brk.h"
+#include "mmap.h"
 
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/kernel/processmgr.h>
@@ -32,6 +33,8 @@ int __vita_syscall_interp(int n, int r1, int r2, int r3, int r4, int r5, int r6)
         return 0;
     case SYS_brk:
         return (int)__vita_brk((void *)r1);
+    case SYS_mmap2:
+        return (int)__vita_mmap((void *)r1, r2, r3, r4, r5, r6);
     case __NR_ARM_set_tls:
         return __vita_set_tls((void *)r1);
     default:
