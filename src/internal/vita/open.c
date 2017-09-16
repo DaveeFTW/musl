@@ -8,25 +8,26 @@
 #include <psp2/io/fcntl.h>
 #include <psp2/kernel/clib.h>
 
-static int _fcntl2sony(int flags) {
-        int out = 0;
-        if (flags & O_RDWR)
-                out |= SCE_O_RDWR;
-        else if (flags & O_WRONLY)
-                out |= SCE_O_WRONLY;
-        else
-                out |= SCE_O_RDONLY;
-        if (flags & O_NONBLOCK)
-                out |= SCE_O_NBLOCK;
-        if (flags & O_APPEND)
-                out |= SCE_O_APPEND;
-        if (flags & O_CREAT)
-                out |= SCE_O_CREAT;
-        if (flags & O_TRUNC)
-                out |= SCE_O_TRUNC;
-        if (flags & O_EXCL)
-                out |= SCE_O_EXCL;
-        return out;
+static int _fcntl2sony(int flags)
+{
+    int out = 0;
+    if (flags & O_RDWR)
+        out |= SCE_O_RDWR;
+    else if (flags & O_WRONLY)
+        out |= SCE_O_WRONLY;
+    else
+        out |= SCE_O_RDONLY;
+    if (flags & O_NONBLOCK)
+        out |= SCE_O_NBLOCK;
+    if (flags & O_APPEND)
+        out |= SCE_O_APPEND;
+    if (flags & O_CREAT)
+        out |= SCE_O_CREAT;
+    if (flags & O_TRUNC)
+        out |= SCE_O_TRUNC;
+    if (flags & O_EXCL)
+        out |= SCE_O_EXCL;
+    return out;
 }
 
 int __vita_open(const char *path, int oflag)
