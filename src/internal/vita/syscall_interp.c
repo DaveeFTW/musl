@@ -10,6 +10,7 @@
 #include "write.h"
 #include "close.h"
 #include "seek.h"
+#include "access.h"
 
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/kernel/processmgr.h>
@@ -53,6 +54,11 @@ int __vita_syscall_interp(int n, int r1, int r2, int r3, int r4, int r5, int r6)
         return __vita_close(r1);
     case SYS__llseek:
         return __vita__llseek(r1, r2, r3, (off_t *)r4, r5);
+    case SYS_ioctl:
+        sceClibPrintf("got ioctl: %i %i\n", r1, r2);
+        return -ENOSYS;
+    case SYS_access:
+        return __vita_access((const char *)r1, r2);
     case __NR_ARM_set_tls:
         return __vita_set_tls((void *)r1);
     default:
