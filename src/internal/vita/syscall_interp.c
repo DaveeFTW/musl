@@ -45,6 +45,8 @@ int __vita_syscall_interp(int n, int r1, int r2, int r3, int r4, int r5, int r6)
         return __vita_open((const char *)r1, r2);
     case SYS_read:
         return __vita_read(r1, (void *)r2, r3);
+    case SYS_readv:
+        return __vita_readv(r1, (const struct iovec *)r2, r3);
     case SYS_writev:
         return __vita_writev(r1, (const struct iovec *)r2, r3);
     case SYS_close:

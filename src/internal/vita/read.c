@@ -58,3 +58,41 @@ ssize_t __vita_read(int fd, void *buf, size_t count)
     __vita_fd_drop(f);
     return read;
 }
+
+ssize_t __vita_readv(int fd, const struct iovec *iov, int iovcnt)
+{
+    ssize_t size = 0;
+    DescriptorTranslation *f = __vita_fd_grab(fd);
+
+    if (!f)
+        return -EBADF;
+
+    for (int i = 0; i < iovcnt; ++i)
+    {
+        int read = 0;
+
+        switch (f->type)
+        {
+        case VITA_DESCRIPTOR_PIPE:
+            read = read_pipe(f, iov[i].iov_base, iov[i].iov_len);
+            break;
+        case VITA_DESCRIPTOR_FILE:
+            read = read_file(f, iov[i].iov_base, iov[i].iov_len);
+            break;
+        default:
+            sceClibPrintf("unhandled descriptor %i, %i\n", fd, f->type);
+            break;
+        }
+
+        if (read < 0)
+        {
+            __vita_fd_drop(f);
+            return -(read & 0xFF);
+        }
+
+        size += read;
+    }
+
+    __vita_fd_drop(f);
+    return size;
+}
