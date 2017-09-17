@@ -42,6 +42,8 @@ int __vita_syscall_interp(int n, int r1, int r2, int r3, int r4, int r5, int r6)
         return (int)__vita_brk((void *)r1);
     case SYS_mmap2:
         return (int)__vita_mmap((void *)r1, r2, r3, r4, r5, r6);
+    case SYS_munmap:
+        return __vita_munmap((void *)r1, r2);
     case SYS_open:
         return __vita_open((const char *)r1, r2);
     case SYS_read:

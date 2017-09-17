@@ -61,3 +61,14 @@ void *__vita_mmap(void *start, size_t len, int prot, int flags, int fd, off_t of
     sceClibPrintf("got addr 0x%08X\n", addr);
     return addr;
 }
+
+int __vita_munmap(void *start, size_t len)
+{
+    SceUID block = sceKernelFindMemBlockByAddr(start, len);
+
+    if (block < 0)
+        return -EINVAL;
+
+    sceKernelFreeMemBlock(block);
+    return 0;
+}
