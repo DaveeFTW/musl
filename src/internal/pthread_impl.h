@@ -142,7 +142,7 @@ void __block_app_sigs(void *);
 void __restore_sigs(void *);
 
 #define DEFAULT_STACK_SIZE 81920
-#define DEFAULT_GUARD_SIZE 4096
+#define DEFAULT_GUARD_SIZE 0
 
 #define __ATTRP_C11_THREAD ((void*)(uintptr_t)-1)
 
