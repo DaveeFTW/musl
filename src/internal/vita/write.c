@@ -4,6 +4,7 @@
 #include <errno.h>
 
 #include <psp2/io/fcntl.h>
+#include <psp2/kernel/clib.h>
 
 ssize_t __vita_writev(int fd, const struct iovec *iov, int count)
 {
@@ -12,6 +13,12 @@ ssize_t __vita_writev(int fd, const struct iovec *iov, int count)
 
     if (!fdmap)
         return -EBADF;
+
+    if (fdmap->type == VITA_DESCRIPTOR_SOCKET || fdmap->type == VITA_DESCRIPTOR_PIPE)
+    {
+        sceClibPrintf("musl: writev does not support SOCKET or PIPE descriptors\n");
+        return -ENOSYS;
+    }
 
     for (int i = 0; i < count; ++i)
     {
