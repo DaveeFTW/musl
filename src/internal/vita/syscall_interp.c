@@ -11,6 +11,7 @@
 #include "close.h"
 #include "seek.h"
 #include "access.h"
+#include "time.h"
 
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/kernel/processmgr.h>
@@ -61,6 +62,8 @@ int __vita_syscall_interp(int n, int r1, int r2, int r3, int r4, int r5, int r6)
         return -ENOSYS;
     case SYS_access:
         return __vita_access((const char *)r1, r2);
+    case SYS_clock_gettime:
+        return __vita_clock_gettime(r1, (struct timespec *)r2);
     case __NR_ARM_set_tls:
         return __vita_set_tls((void *)r1);
     default:
