@@ -18,6 +18,7 @@
 #include "stat.h"
 #include "getcwd.h"
 #include "socket.h"
+#include "bind.h"
 
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/kernel/processmgr.h>
@@ -83,11 +84,9 @@ int __vita_syscall_interp(int n, int r1, int r2, int r3, int r4, int r5, int r6)
     case SYS_getcwd:
         return __vita_getcwd((char *)r1, r2);
     case SYS_socket:
-    {
-        int res = __vita_socket(r1, r2, r3);
-        sceClibPrintf("musl: socket res: %i\n", res);
-        return res;
-    }
+        return __vita_socket(r1, r2, r3);
+    case SYS_bind:
+        return __vita_bind(r1, (const struct sockaddr *)r2, r3);
     case __NR_ARM_set_tls:
         return __vita_set_tls((void *)r1);
     default:
