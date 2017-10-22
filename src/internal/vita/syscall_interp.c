@@ -16,6 +16,8 @@
 #include "poll.h"
 #include "fcntl.h"
 #include "stat.h"
+#include "getcwd.h"
+#include "socket.h"
 
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/kernel/processmgr.h>
@@ -78,6 +80,14 @@ int __vita_syscall_interp(int n, int r1, int r2, int r3, int r4, int r5, int r6)
         return __vita_fcntl64(r1, r2, r3);
     case SYS_stat64:
         return __vita_stat64((const char *)r1, (struct stat *)r2);
+    case SYS_getcwd:
+        return __vita_getcwd((char *)r1, r2);
+    case SYS_socket:
+    {
+        int res = __vita_socket(r1, r2, r3);
+        sceClibPrintf("musl: socket res: %i\n", res);
+        return res;
+    }
     case __NR_ARM_set_tls:
         return __vita_set_tls((void *)r1);
     default:
