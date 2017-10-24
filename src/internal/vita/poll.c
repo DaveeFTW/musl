@@ -2,13 +2,35 @@
 #include "fd.h"
 
 #include <sys/uio.h>
+#include <string.h>
 #include <errno.h>
 
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/kernel/clib.h>
+#include <psp2/net/net.h>
+
+#include <sys/ioctl.h>
 
 // TODO: add to SDK
 #define MSG_PIPE_PEEK   (0x100)
+
+static int poll_peek_socket(DescriptorTranslation *f)
+{
+    SceNetEpollEvent event = { 0 };
+
+    int eid = sceNetEpollCreate("musl-epoll", 0);
+
+    event.events = SCE_NET_EPOLLIN;
+
+    sceNetEpollControl(eid, SCE_NET_EPOLL_CTL_ADD, f->sce_uid, &event);
+    sceNetEpollWait(eid, &event, 1, 0);
+    sceNetEpollDestroy(eid);
+
+    int res = event.events & SCE_NET_EPOLLIN;
+
+    sceClibPrintf("poll_peek_socket: 0x%08X\n", res);
+    return res;
+}
 
 static int poll_peek_pipe(DescriptorTranslation *f)
 {
@@ -27,8 +49,7 @@ static int is_pollin_ready(DescriptorTranslation *f)
         sceClibPrintf("musl: poll() POLLIN not supported for FILE\n");
         return 0;
     case VITA_DESCRIPTOR_SOCKET:
-        sceClibPrintf("musl: poll() POLLIN not supported for SOCKET\n");
-        return 0;
+        return poll_peek_socket(f);
     case VITA_DESCRIPTOR_PIPE:
         return poll_peek_pipe(f);
     default:
@@ -69,7 +90,6 @@ int __vita_poll(struct pollfd *fds, nfds_t nfds, int timeout)
 
     while (elapsed_time < timeout || timeout == -1)
     {
-
         for (int i = 0; i < nfds; ++i)
         {
             struct pollfd *fd = &fds[i];
@@ -123,9 +143,11 @@ int __vita_poll(struct pollfd *fds, nfds_t nfds, int timeout)
             if (poll_in || poll_out)
             {
                 ++selected;
-                break;
             }
         }
+
+        if (selected)
+            break;
 
         // TODO: improve - this is very crude
         sceKernelDelayThread(100);
