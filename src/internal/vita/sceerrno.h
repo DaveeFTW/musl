@@ -1,11 +1,6 @@
 #ifndef SCEERRNO_H
 #define SCEERRNO_H
 
-
-class sceerrno
-{
-public:
-    sceerrno();
-};
+int __vita_sce_errno_to_errno(int sce_errno);
 
 #endif // SCEERRNO_H

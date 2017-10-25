@@ -1,5 +1,6 @@
 #include "read.h"
 #include "fd.h"
+#include "sceerrno.h"
 
 #include <fcntl.h>
 #include <errno.h>
@@ -39,9 +40,11 @@ static ssize_t read_socket(DescriptorTranslation *f, void *buf, size_t count)
 {
     int res = sceNetRecv(f->sce_uid, buf, count, 0);
 
+    sceClibPrintf("sceNetRecv: 0x%08X\n", res);
+
     if (res < 0)
     {
-        return -EINVAL;
+        return -__vita_sce_errno_to_errno(res);
     }
 
     return res;
