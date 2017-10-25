@@ -6,6 +6,7 @@
 
 #include <psp2/io/fcntl.h>
 #include <psp2/kernel/threadmgr.h>
+#include <psp2/net/net.h>
 #include <psp2/kernel/clib.h>
 
 static ssize_t read_pipe(DescriptorTranslation *f, void *buf, size_t count)
@@ -34,13 +35,25 @@ static ssize_t read_file(DescriptorTranslation *f, void *buf, size_t count)
     return res;
 }
 
+static ssize_t read_socket(DescriptorTranslation *f, void *buf, size_t count)
+{
+    int res = sceNetRecv(f->sce_uid, buf, count, 0);
+
+    if (res < 0)
+    {
+        return -EINVAL;
+    }
+
+    return res;
+}
+
 ssize_t __vita_read(int fd, void *buf, size_t count)
 {
     ssize_t read = -1;
     DescriptorTranslation *f = __vita_fd_grab(fd);
 
     if (!f)
-        return -EINVAL;
+        return -EBADF;
 
     switch (f->type)
     {
@@ -50,8 +63,11 @@ ssize_t __vita_read(int fd, void *buf, size_t count)
     case VITA_DESCRIPTOR_FILE:
         read = read_file(f, buf, count);
         break;
+    case VITA_DESCRIPTOR_SOCKET:
+        read = read_socket(f, buf, count);
+        break;
     default:
-        sceClibPrintf("unhandled descriptor %i, %i\n", fd, f->type);
+        sceClibPrintf("musl: read: unhandled descriptor %i, %i\n", fd, f->type);
         break;
     }
 
@@ -79,8 +95,11 @@ ssize_t __vita_readv(int fd, const struct iovec *iov, int iovcnt)
         case VITA_DESCRIPTOR_FILE:
             read = read_file(f, iov[i].iov_base, iov[i].iov_len);
             break;
+        case VITA_DESCRIPTOR_SOCKET:
+            read = read_socket(f, iov[i].iov_base, iov[i].iov_len);
+            break;
         default:
-            sceClibPrintf("unhandled descriptor %i, %i\n", fd, f->type);
+            sceClibPrintf("musl: read: unhandled descriptor %i, %i\n", fd, f->type);
             break;
         }
 
