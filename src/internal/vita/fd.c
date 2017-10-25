@@ -6,6 +6,8 @@
 
 #include <psp2/io/fcntl.h>
 #include <psp2/kernel/threadmgr.h>
+#include <psp2/net/net.h>
+#include <psp2/kernel/clib.h>
 
 #define SCE_ERRNO_MASK 0xFF
 
@@ -200,9 +202,12 @@ int __vita_fd_drop(DescriptorTranslation *map)
             ret = sceIoClose(map->sce_uid);
             break;
         }
+        case VITA_DESCRIPTOR_PIPE:
+            sceClibPrintf("musl: close not implemented for PIPE\n");
+            ret = 0;
+            break;
         case VITA_DESCRIPTOR_SOCKET:
-        //    if (__vita_glue_socket_close)
-        //        ret = __vita_glue_socket_close(map->sce_uid);
+            ret = sceNetSocketClose(map->sce_uid);
             break;
         }
 
