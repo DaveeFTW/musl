@@ -20,6 +20,7 @@
 #include "socket.h"
 #include "bind.h"
 #include "listen.h"
+#include "accept.h"
 
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/kernel/processmgr.h>
@@ -90,6 +91,10 @@ int __vita_syscall_interp(int n, int r1, int r2, int r3, int r4, int r5, int r6)
         return __vita_bind(r1, (const struct sockaddr *)r2, r3);
     case SYS_listen:
         return __vita_listen(r1, r2);
+    case SYS_accept:
+        return __vita_accept4(r1, (struct sockaddr * )r2, (socklen_t *)r3, 0);
+    case SYS_accept4:
+        return __vita_accept4(r1, (struct sockaddr * )r2, (socklen_t *)r3, r4);
     case __NR_ARM_set_tls:
         return __vita_set_tls((void *)r1);
     default:

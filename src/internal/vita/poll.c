@@ -14,7 +14,7 @@
 // TODO: add to SDK
 #define MSG_PIPE_PEEK   (0x100)
 
-static int poll_peek_socket(DescriptorTranslation *f)
+static int poll_peek_in_socket(DescriptorTranslation *f)
 {
     SceNetEpollEvent event = { 0 };
 
@@ -26,10 +26,22 @@ static int poll_peek_socket(DescriptorTranslation *f)
     sceNetEpollWait(eid, &event, 1, 0);
     sceNetEpollDestroy(eid);
 
-    int res = event.events & SCE_NET_EPOLLIN;
+    return event.events & SCE_NET_EPOLLIN;
+}
 
-    sceClibPrintf("poll_peek_socket: 0x%08X\n", res);
-    return res;
+static int poll_peek_out_socket(DescriptorTranslation *f)
+{
+    SceNetEpollEvent event = { 0 };
+
+    int eid = sceNetEpollCreate("musl-epoll", 0);
+
+    event.events = SCE_NET_EPOLLOUT;
+
+    sceNetEpollControl(eid, SCE_NET_EPOLL_CTL_ADD, f->sce_uid, &event);
+    sceNetEpollWait(eid, &event, 1, 0);
+    sceNetEpollDestroy(eid);
+
+    return event.events & SCE_NET_EPOLLOUT;
 }
 
 static int poll_peek_pipe(DescriptorTranslation *f)
@@ -49,7 +61,7 @@ static int is_pollin_ready(DescriptorTranslation *f)
         sceClibPrintf("musl: poll() POLLIN not supported for FILE\n");
         return 0;
     case VITA_DESCRIPTOR_SOCKET:
-        return poll_peek_socket(f);
+        return poll_peek_in_socket(f);
     case VITA_DESCRIPTOR_PIPE:
         return poll_peek_pipe(f);
     default:
@@ -70,8 +82,7 @@ static int is_pollout_ready(DescriptorTranslation *f)
         sceClibPrintf("musl: poll() POLLOUT not supported for FILE\n");
         return 0;
     case VITA_DESCRIPTOR_SOCKET:
-        sceClibPrintf("musl: poll() POLLOUT not supported for SOCKET\n");
-        return 0;
+        return poll_peek_out_socket(f);
     case VITA_DESCRIPTOR_PIPE:
         sceClibPrintf("musl: poll() POLLOUT not supported for PIPE\n");
         return 0;
