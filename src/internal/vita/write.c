@@ -4,6 +4,7 @@
 #include <errno.h>
 
 #include <psp2/io/fcntl.h>
+#include <psp2/net/net.h>
 #include <psp2/kernel/clib.h>
 
 ssize_t __vita_writev(int fd, const struct iovec *iov, int count)
@@ -35,4 +36,40 @@ ssize_t __vita_writev(int fd, const struct iovec *iov, int count)
 
     __vita_fd_drop(fdmap);
     return size;
+}
+
+ssize_t __vita_write(int fd, const void *buf, size_t count)
+{
+    int res = 0;
+    DescriptorTranslation *fdmap = __vita_fd_grab(fd);
+
+    if (!fdmap)
+        return -EBADF;
+
+
+    switch (fdmap->type)
+    {
+    case VITA_DESCRIPTOR_TTY:
+    case VITA_DESCRIPTOR_FILE:
+        res = sceIoWrite(fdmap->sce_uid, buf, count);
+
+        // TODO: check this is still correct
+        if (res < 0)
+            res = -(res & 0xFF);
+        break;
+    case VITA_DESCRIPTOR_SOCKET:
+        res = sceNetSend(fdmap->sce_uid, buf, count, 0);
+
+        // TODO: check this is still correct
+        if (res < 0)
+            res = -(res & 0xFF);
+        break;
+    case VITA_DESCRIPTOR_PIPE:
+        sceClibPrintf("musl: write not implemented for PIPE\n");
+        res = -ENOSYS;
+        break;
+    }
+
+    __vita_fd_drop(fdmap);
+    return res;
 }

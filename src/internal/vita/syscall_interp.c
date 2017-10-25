@@ -95,6 +95,8 @@ int __vita_syscall_interp(int n, int r1, int r2, int r3, int r4, int r5, int r6)
         return __vita_accept4(r1, (struct sockaddr * )r2, (socklen_t *)r3, 0);
     case SYS_accept4:
         return __vita_accept4(r1, (struct sockaddr * )r2, (socklen_t *)r3, r4);
+    case SYS_write:
+        return __vita_write(r1, (const void *)r2, r3);
     case __NR_ARM_set_tls:
         return __vita_set_tls((void *)r1);
     default:
