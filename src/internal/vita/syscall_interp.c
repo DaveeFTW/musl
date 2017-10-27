@@ -22,6 +22,7 @@
 #include "listen.h"
 #include "accept.h"
 #include "ioctl.h"
+#include "sockopt.h"
 
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/kernel/processmgr.h>
@@ -97,6 +98,10 @@ int __vita_syscall_interp(int n, int r1, int r2, int r3, int r4, int r5, int r6)
         return __vita_accept4(r1, (struct sockaddr * )r2, (socklen_t *)r3, r4);
     case SYS_write:
         return __vita_write(r1, (const void *)r2, r3);
+    case SYS_getsockopt:
+        return __vita_getsockopt(r1, r2, r3, (void *)r4, (socklen_t *)r5);
+    case SYS_setsockopt:
+        return __vita_setsockopt(r1, r2, r3, (const void *)r4, (socklen_t)r5);
     case __NR_ARM_set_tls:
         return __vita_set_tls((void *)r1);
     default:
