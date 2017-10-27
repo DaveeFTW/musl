@@ -23,6 +23,13 @@ int __vita_fcntl64(int fd, int cmd, int arg)
         return 0;
     }
 
+    else if (cmd == F_GETFL)
+    {
+        int flags = f->flags;
+        __vita_fd_drop(f);
+        return flags;
+    }
+
     else if (cmd == F_SETFL)
     {
         // TODO: implement rest of operations
