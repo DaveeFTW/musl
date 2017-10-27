@@ -1,5 +1,6 @@
 #include "ioctl.h"
 #include "fd.h"
+#include "sceerrno.h"
 
 #include <errno.h>
 #include <sys/ioctl.h>
@@ -24,8 +25,7 @@ int __vita_ioctl(int fd, unsigned long request, int arg1)
 
             if (res < 0)
             {
-                // TODO: properly deal with this
-                res = -(res & 0xFF);
+                res = -__vita_sce_errno_to_errno(res);
             }
             else
             {

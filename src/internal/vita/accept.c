@@ -1,5 +1,6 @@
 #include "accept.h"
 #include "fd.h"
+#include "sceerrno.h"
 
 #include <errno.h>
 
@@ -18,8 +19,7 @@ int __vita_accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int fl
 
     if (newsock < 0)
     {
-        // TODO: not 1:1 mapping ERRNO
-        return -(newsock & 0xFF);
+        return -__vita_sce_errno_to_errno(newsock);
     }
 
     int fd = __vita_acquire_descriptor();

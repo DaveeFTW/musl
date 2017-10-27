@@ -24,6 +24,7 @@
 #include "ioctl.h"
 #include "sockopt.h"
 #include "getsockname.h"
+#include "getpeername.h"
 
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/kernel/processmgr.h>
@@ -35,6 +36,9 @@ extern int __vita_external_syscall_interp(int n, int r1, int r2, int r3, int r4,
 
 int __vita_syscall_interp(int n, int r1, int r2, int r3, int r4, int r5, int r6)
 {
+    //if (n != SYS_poll && n != SYS_clock_gettime)
+    //    sceClibPrintf("musl: syscall called: %i: %s\n", n, __lookup_syscall_name(n));
+
     switch (n)
     {
     case SYS_exit:
@@ -105,6 +109,8 @@ int __vita_syscall_interp(int n, int r1, int r2, int r3, int r4, int r5, int r6)
         return __vita_setsockopt(r1, r2, r3, (const void *)r4, (socklen_t)r5);
     case SYS_getsockname:
         return __vita_getsockname(r1, (struct sockaddr *)r2, (socklen_t *)r3);
+    case SYS_getpeername:
+        return __vita_getpeername(r1, (struct sockaddr *)r2, (socklen_t *)r3);
     case __NR_ARM_set_tls:
         return __vita_set_tls((void *)r1);
     default:

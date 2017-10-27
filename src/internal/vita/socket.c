@@ -1,21 +1,10 @@
 #include "socket.h"
 #include "fd.h"
+#include "sceerrno.h"
 
 #include <errno.h>
 
 #include <psp2/net/net.h>
-
-static int convert_sce_to_errno(int err)
-{
-    switch (err)
-    {
-    case SCE_NET_EPROTONOSUPPORT:
-        return EPROTONOSUPPORT;
-    }
-
-    // default we keep it the same
-    return err;
-}
 
 int __vita_socket(int domain, int type, int protocol)
 {
@@ -23,7 +12,7 @@ int __vita_socket(int domain, int type, int protocol)
 
     if (s < 0)
     {
-        return -convert_sce_to_errno(s & 0xFF);
+        return -__vita_sce_errno_to_errno(s);
     }
 
     int fd = __vita_acquire_descriptor();

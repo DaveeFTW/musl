@@ -1,5 +1,6 @@
 #include "listen.h"
 #include "fd.h"
+#include "sceerrno.h"
 
 #include <errno.h>
 
@@ -17,7 +18,7 @@ int __vita_listen(int sockfd, int backlog)
     __vita_fd_drop(f);
 
     if (res < 0)
-        return -(res & 0xFF);
+        return -__vita_sce_errno_to_errno(res);
 
     return 0;
 }
