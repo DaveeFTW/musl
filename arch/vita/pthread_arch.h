@@ -1,11 +1,18 @@
 #if ((__ARM_ARCH_6K__ || __ARM_ARCH_6ZK__) && !__thumb__) \
  || __ARM_ARCH_7A__ || __ARM_ARCH_7R__ || __ARM_ARCH >= 7
 
+#include <psp2/kernel/threadmgr.h>
+
+// at this index we will store the expected pointer to the musl
+// TLS memory
+// TODO: unify with tls.c in main syscall files
+#define TLS_PTR_INDEX (0x88)
+
 static inline pthread_t __pthread_self()
 {
-	char *p;
-	__asm__ __volatile__ ( "mrc p15,0,%0,c13,c0,3" : "=r"(p) );
-	return (void *)(p+8-sizeof(struct pthread));
+        char **p;
+        p = sceKernelGetTLSAddr(TLS_PTR_INDEX);
+        return (void *)(*p+8-sizeof(struct pthread));
 }
 
 #else
