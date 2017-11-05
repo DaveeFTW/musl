@@ -20,7 +20,9 @@ __cp_begin:
         mov r1,r2
         mov r2,r3
         ldmfd ip,{r3,r4,r5,r6,r7}
+        stmfd sp!,{r4,r5,r6,r7}
         bl __syscall
+        ldmfd sp!,{r4,r5,r6,r7}
 __cp_end:
 	ldmfd sp!,{r4,r5,r6,r7,lr}
 	bx lr
