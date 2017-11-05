@@ -10,6 +10,10 @@
 #include "atomic.h"
 #include "futex.h"
 
+#if defined(__vita__)
+#include <psp2/kernel/threadmgr.h>
+#endif
+
 #define pthread __pthread
 
 struct pthread {
@@ -42,6 +46,9 @@ struct pthread {
 	volatile int killlock[2];
 	volatile int exitlock[2];
 	volatile int startlock[2];
+#if defined(__vita__)
+        SceUID waiter_lock;
+#endif
 	unsigned long sigmask[_NSIG/8/sizeof(long)];
 	char *dlerror_buf;
 	int dlerror_flag;

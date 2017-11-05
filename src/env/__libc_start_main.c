@@ -6,6 +6,11 @@
 #include "atomic.h"
 #include "libc.h"
 
+#if defined(__vita__)
+#include "pthread_impl.h"
+#include <psp2/kernel/threadmgr.h>
+#endif
+
 void __init_tls(size_t *);
 
 static void dummy(void) {}
@@ -55,6 +60,9 @@ void __init_libc(char **envp, char *pn)
 
 static void libc_start_init(void)
 {
+#if defined(__vita__)
+        __pthread_self()->waiter_lock = sceKernelCreateSema("musl-waiter-thrd", 0, 0, 1, NULL);
+#endif
 	_init();
 	uintptr_t a = (uintptr_t)&__init_array_start;
 	for (; a<(uintptr_t)&__init_array_end; a+=sizeof(void(*)()))

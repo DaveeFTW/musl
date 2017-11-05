@@ -25,6 +25,7 @@
 #include "sockopt.h"
 #include "getsockname.h"
 #include "getpeername.h"
+#include "futex.h"
 
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/kernel/processmgr.h>
@@ -116,6 +117,8 @@ int __vita_syscall_interp(int n, int r1, int r2, int r3, int r4, int r5, int r6)
         return __vita_getsockname(r1, (struct sockaddr *)r2, (socklen_t *)r3);
     case SYS_getpeername:
         return __vita_getpeername(r1, (struct sockaddr *)r2, (socklen_t *)r3);
+    case SYS_futex:
+        return __vita_futex((int *)r1, r2, r3, (const struct timespec *)r4, (int *)r5, r6);
     case __NR_ARM_set_tls:
         return __vita_set_tls((void *)r1);
     default:

@@ -6,6 +6,10 @@
 #include <string.h>
 #include <stddef.h>
 
+#if defined(__vita__)
+#include <psp2/kernel/threadmgr.h>
+#endif
+
 void *__mmap(void *, size_t, int, int, int, off_t);
 int __munmap(void *, size_t);
 int __mprotect(void *, size_t, int);
@@ -42,6 +46,9 @@ _Noreturn void __pthread_exit(void *result)
 	/* Mark this thread dead before decrementing count */
 	__lock(self->killlock);
 	self->dead = 1;
+
+        sceKernelDeleteSema(self->waiter_lock);
+        self->waiter_lock = -1;
 
 	/* Block all signals before decrementing the live thread count.
 	 * This is important to ensure that dynamically allocated TLS
@@ -276,6 +283,10 @@ int __pthread_create(pthread_t *restrict res, const pthread_attr_t *restrict att
 	new->robust_list.head = &new->robust_list.head;
 	new->unblock_cancel = self->cancel;
 	new->CANARY = self->CANARY;
+
+#if defined(__vita__)
+        new->waiter_lock = sceKernelCreateSema("musl-waiter-thrd", 0, 0, 1, NULL);
+#endif
 
 	a_inc(&libc.threads_minus_1);
 	ret = __clone((c11 ? start_c11 : start), stack, flags, new, &new->tid, TP_ADJ(new), &new->tid);
