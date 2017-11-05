@@ -2,8 +2,10 @@
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/kernel/clib.h>
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <errno.h>
+#include <sched.h>
 
 // TODO: contribute to SDK
 typedef struct
@@ -24,7 +26,7 @@ int __vita_clone_entry(SceSize args, void *argp)
     return func(params[1]);
 }
 
-int __clone(int (*func)(void *), void *stack, int flags, void *arg, ...)
+int __clone(int (*func)(void *), void *stack, int flags, void *arg, pid_t *ptid, void *newtls, pid_t *ctid)
 {
 #if WE_HAD_KERNEL_IMPL
     SceKernelMemBlockInfo info;
@@ -49,6 +51,34 @@ int __clone(int (*func)(void *), void *stack, int flags, void *arg, ...)
     fprintf(stderr, "sceKernelCreateThread: 0x%08X\n", res);
 #endif
 
+    // ensure that CLONE_VM is set
+    if (!(flags & CLONE_VM))
+    {
+        sceClibPrintf("musl: cannot create thread without CLONE_VM\n");
+        return -ENOSYS;
+    }
+
+    // ensure that CLONE_FS is set
+    if (!(flags & CLONE_FS))
+    {
+        sceClibPrintf("musl: cannot create thread without CLONE_FS\n");
+        return -ENOSYS;
+    }
+
+    // ensure that CLONE_FILES is set
+    if (!(flags & CLONE_FILES))
+    {
+        sceClibPrintf("musl: cannot create thread without CLONE_FILES\n");
+        return -ENOSYS;
+    }
+
+    // ensure that CLONE_THREAD is set
+    if (!(flags & CLONE_THREAD))
+    {
+        sceClibPrintf("musl: cannot create thread without CLONE_THREAD\n");
+        return -ENOSYS;
+    }
+
     SceKernelMemBlockInfo info;
     info.size = sizeof(SceKernelMemBlockInfo);
 
@@ -56,17 +86,34 @@ int __clone(int (*func)(void *), void *stack, int flags, void *arg, ...)
 
     res = sceKernelCreateThread("muslclone", __vita_clone_entry, 0x10000100, info.mappedSize, 0, 0, NULL);
 
-    sceClibPrintf("sceKernelCreateThread: 0x%08X\n", res);
-
     if (res < 0)
         return -EINVAL;
+
+    // check if there is a TLS value to be used
+    if (flags & CLONE_SETTLS)
+    {
+        // TODO: change fixed value
+        void **p = sceKernelGetThreadTLSAddr(res, 0x88);
+        *p = newtls;
+    }
+
+    // set the thread id in parent memory (same VA)
+    if (flags & CLONE_PARENT_SETTID)
+    {
+        *ptid = res;
+    }
+
+    if (flags & CLONE_CHILD_CLEARTID)
+    {
+        sceClibPrintf("## MUSL: TODO: CLONE_CHILD_CLEARTID\n");
+    }
+
+    // CLONE_DETACHED is a no-op
 
     unsigned int *params[2];
     params[0] = (unsigned int *)func;
     params[1] = (unsigned int *)arg;
 
     res = sceKernelStartThread(res, sizeof(params), params);
-
-    sceClibPrintf("sceKernelStartThread 0x%08X\n", res);
     return 0;
 }
