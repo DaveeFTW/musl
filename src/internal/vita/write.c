@@ -1,11 +1,13 @@
 #include "write.h"
 #include "fd.h"
 
+#include <fcntl.h>
 #include <errno.h>
 
 #include <psp2/io/fcntl.h>
 #include <psp2/net/net.h>
 #include <psp2/kernel/clib.h>
+#include <psp2/kernel/threadmgr.h>
 
 ssize_t __vita_writev(int fd, const struct iovec *iov, int count)
 {
@@ -65,9 +67,17 @@ ssize_t __vita_write(int fd, const void *buf, size_t count)
             res = -(res & 0xFF);
         break;
     case VITA_DESCRIPTOR_PIPE:
-        sceClibPrintf("musl: write not implemented for PIPE\n");
-        res = -ENOSYS;
-        break;
+        {
+            int blocking = (fdmap->flags & O_NONBLOCK) ? (0x10) : (0);
+
+            // TODO: shout at SDK for const-ness... again
+            res = sceKernelSendMsgPipe(fdmap->sce_uid, (void *)buf, count, blocking, NULL, NULL);
+
+            // TODO: check this is still correct
+            if (res < 0)
+                res = -(res & 0xFF);
+            break;
+        }
     }
 
     __vita_fd_drop(fdmap);
