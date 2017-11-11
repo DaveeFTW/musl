@@ -25,6 +25,7 @@ typedef struct uaddr_entry
     struct uaddr_entry *next;
     int *uaddr;
     futex_waiter *waiters;
+    int init_lock;
     SceKernelLwMutexWork lock;
 } uaddr_entry;
 
@@ -51,6 +52,7 @@ void __vita_init_futex(void)
         g_uaddr_table[i].next = (i == UADDR_TABLE_N-1) ? (NULL) : (&g_uaddr_table[i+1]);
         g_uaddr_table[i].uaddr = NULL;
         g_uaddr_table[i].waiters = NULL;
+        g_uaddr_table[i].init_lock = 0;
     }
 
     sceKernelUnlockLwMutex(&g_uaddr_lock, 1);
@@ -106,7 +108,12 @@ static uaddr_entry *get_or_create_entry(int *uaddr)
         reserved->next = g_uaddr_reserved;
 
         // TODO: rethink this one
-        sceKernelCreateLwMutex(&reserved->lock, "musl-uaddr", 0, 0, NULL);
+        if (!reserved->init_lock)
+        {
+            sceKernelCreateLwMutex(&reserved->lock, "musl-uaddr", 0, 0, NULL);
+            reserved->init_lock = 1;
+        }
+
         g_uaddr_reserved = reserved;
     }
 
@@ -251,8 +258,9 @@ static int do_futex_wake(int *uaddr, unsigned int val)
     {
         int res = sceKernelSignalSema(waiter->lock, 1);
         sceClibPrintf("woken up: 0x%08X -> 0x%08X\n", waiter->lock, res);
+        futex_waiter *next = waiter->next;
         release_waiter(waiter);
-        waiter = waiter->next;
+        waiter = next;
     }
 
     entry->waiters = waiter;
