@@ -6,6 +6,7 @@
 #include <errno.h>
 
 #include <psp2/io/fcntl.h>
+#include <psp2/io/dirent.h>
 #include <psp2/kernel/clib.h>
 
 static int _fcntl2sony(int flags)
@@ -30,10 +31,43 @@ static int _fcntl2sony(int flags)
     return out;
 }
 
+static int open_directory(const char *path, int oflags)
+{
+    int res  = sceIoDopen(path);
+
+    if (res < 0)
+    {
+        // TODO: check if this makes any sense
+        return -(res & 0xFF);
+    }
+
+    int fd = __vita_acquire_descriptor();
+
+    if (fd < 0)
+    {
+        sceIoDclose(res);
+        return -EMFILE;
+    }
+
+    DescriptorTranslation *fdmap = __vita_fd_grab(fd);
+
+    fdmap->sce_uid = res;
+    fdmap->type = VITA_DESCRIPTOR_DIRECTORY;
+    fdmap->flags = oflags;
+
+    __vita_fd_drop(fdmap);
+    return fd;
+}
+
 int __vita_open(const char *path, int oflag)
 {
     int is_tty = 0;
     sceClibPrintf("trying to open %s\n", path);
+
+    if (oflag & O_DIRECTORY)
+    {
+        return open_directory(path, oflag);
+    }
 
     if (strcmp(path, "/dev/tty") == 0)
     {
