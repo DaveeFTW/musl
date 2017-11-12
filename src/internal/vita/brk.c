@@ -18,7 +18,7 @@ static void init_heap(void)
     }
 
     // TODO: check and report
-    g_heap_uid = sceKernelAllocMemBlock("musl_heap", 0x0C20D060, g_heap_size, 0);
+    g_heap_uid = sceKernelAllocMemBlock("musl_heap", SCE_KERNEL_MEMBLOCK_TYPE_USER_RW, g_heap_size, 0);
     sceKernelGetMemBlockBase(g_heap_uid, (void *)&g_heap_base);
 
     g_heap_end = g_heap_base + g_heap_size;

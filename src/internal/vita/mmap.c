@@ -13,7 +13,7 @@ static int to_block_flags(int prot, int flags)
     sceClibPrintf("prot: 0x%X, flags: 0x%X\n", prot, flags);
     if (((prot & (PROT_WRITE | PROT_READ)) == (PROT_WRITE | PROT_READ)) && (flags & MAP_PRIVATE))
     {
-        return 0x0C20D060;
+        return SCE_KERNEL_MEMBLOCK_TYPE_USER_RW;
     }
 
     sceClibPrintf("invalid flags\n");
