@@ -2,11 +2,11 @@
 #include "getdents.h"
 #include "fd.h"
 
-#include <psp2/io/dirent.h>
-
 #include <errno.h>
 #include <string.h>
 #include <dirent.h>
+
+#include <psp2/io/dirent.h>
 
 static unsigned char convert_d_type(SceIoDirent *dirent)
 {
@@ -43,18 +43,18 @@ int __vita_getdents(unsigned int fd, struct dirent *dirp, unsigned int count)
             return -(res & 0xFF);
         }
 
-        dirp[i].d_ino = 0xDEADBEEF;
-        dirp[i].d_off = (i+1)*sizeof(struct dirent);
-        dirp[i].d_reclen = sizeof(struct dirent);
-        dirp[i].d_type = convert_d_type(&dirent);
-        strncpy(dirp[i].d_name, dirent.d_name, sizeof(dirp[i].d_name));
-
         // check if we're at the last directory
         if (res == 0)
         {
             break;
         }
-    }
+
+        dirp[i].d_ino = 0xDEADBEEF;
+        dirp[i].d_off = (i+1)*sizeof(struct dirent);
+        dirp[i].d_reclen = sizeof(struct dirent);
+        dirp[i].d_type = convert_d_type(&dirent);
+        strncpy(dirp[i].d_name, dirent.d_name, 256);
+     }
 
     return read*sizeof(struct dirent);
 }
