@@ -62,6 +62,8 @@ static void libc_start_init(void)
 {
 #if defined(__vita__)
         __pthread_self()->waiter_lock = sceKernelCreateSema("musl-waiter-thrd", 0, 0, 1, NULL);
+        __pthread_self()->set_child_tid = NULL;
+        __pthread_self()->clear_child_tid = NULL;
 #endif
 	_init();
 	uintptr_t a = (uintptr_t)&__init_array_start;

@@ -48,6 +48,8 @@ struct pthread {
 	volatile int startlock[2];
 #if defined(__vita__)
         SceUID waiter_lock;
+        int *set_child_tid;
+        int *clear_child_tid;
 #endif
 	unsigned long sigmask[_NSIG/8/sizeof(long)];
 	char *dlerror_buf;

@@ -10,6 +10,7 @@
 typedef struct futex_waiter
 {
     struct futex_waiter *next;
+    struct futex_waiter *next_queue;
     SceUID lock;
 } futex_waiter;
 
@@ -27,6 +28,7 @@ typedef struct uaddr_entry
     futex_waiter *waiters;
     int init_lock;
     SceKernelLwMutexWork lock;
+    int count;
 } uaddr_entry;
 
 #define UADDR_TABLE_N   (512)
@@ -53,6 +55,7 @@ void __vita_init_futex(void)
         g_uaddr_table[i].uaddr = NULL;
         g_uaddr_table[i].waiters = NULL;
         g_uaddr_table[i].init_lock = 0;
+        g_uaddr_table[i].count = 0;
     }
 
     sceKernelUnlockLwMutex(&g_uaddr_lock, 1);
@@ -106,6 +109,7 @@ static uaddr_entry *get_or_create_entry(int *uaddr)
         reserved->uaddr = uaddr;
         reserved->waiters = NULL;
         reserved->next = g_uaddr_reserved;
+        reserved->count = 0;
 
         // TODO: rethink this one
         if (!reserved->init_lock)
@@ -117,28 +121,42 @@ static uaddr_entry *get_or_create_entry(int *uaddr)
         g_uaddr_reserved = reserved;
     }
 
+    reserved->count++;
+    int res = sceKernelTryLockLwMutex(&reserved->lock, 1, NULL);
     sceKernelUnlockLwMutex(&g_uaddr_lock, 1);
+
+    if (res < 0)
+        sceKernelLockLwMutex(&reserved->lock, 1, NULL);
+
     return reserved;
 }
 
-static void try_release_entry(uaddr_entry *entry)
+static void try_release_entry(uaddr_entry * const entry)
 {
     sceKernelLockLwMutex(&g_uaddr_lock, 1, NULL);
 
     if (entry->waiters == NULL)
     {
+        if (--entry->count > 0)
+            goto exit;
+
         uaddr_entry *prev_reserved = NULL;
         uaddr_entry *reserved = g_uaddr_reserved;
 
-        while (reserved != entry)
+        while (reserved != entry && reserved)
         {
             prev_reserved = reserved;
             reserved = reserved->next;
         }
 
+        if (!reserved)
+        {
+            goto exit;
+        }
+
         if (prev_reserved == NULL)
         {
-            g_uaddr_reserved = NULL;
+            g_uaddr_reserved = entry->next;
         }
         else
         {
@@ -150,6 +168,8 @@ static void try_release_entry(uaddr_entry *entry)
         g_uaddr_free = entry;
     }
 
+exit:
+    sceKernelUnlockLwMutex(&entry->lock, 1);
     sceKernelUnlockLwMutex(&g_uaddr_lock, 1);
 }
 
@@ -162,6 +182,7 @@ static futex_waiter *reserve_waiter(void)
     {
         // we ran out of blocks...
         // TODO: handle
+        //sceClibPrintf("musl: FATAL - ran out of futex_waiter blocks!!\n");
     }
 
     // set new free value
@@ -169,6 +190,7 @@ static futex_waiter *reserve_waiter(void)
 
     // initialise
     reserved->next = g_waiter_reserved;
+    reserved->next_queue = NULL;
     reserved->lock = __pthread_self()->waiter_lock;
 
     g_waiter_reserved = reserved;
@@ -176,21 +198,27 @@ static futex_waiter *reserve_waiter(void)
     return reserved;
 }
 
-static void release_waiter(futex_waiter *waiter)
+static void release_waiter(futex_waiter *waiter, uaddr_entry * const entry)
 {
     sceKernelLockLwMutex(&g_waiter_lock, 1, NULL);
     futex_waiter *prev_reserved = NULL;
     futex_waiter *reserved = g_waiter_reserved;
 
-    while (reserved != waiter)
+    while (reserved != waiter && reserved)
     {
         prev_reserved = reserved;
         reserved = reserved->next;
     }
 
+    if (!reserved)
+    {
+        //sceClibPrintf("couldn't find OASDADAWDASpoidjsf 0x%08X for 0x%08X/0x%08X\n", waiter, entry, entry->uaddr);
+        goto exit;
+    }
+
     if (prev_reserved == NULL)
     {
-        g_waiter_reserved = NULL;
+        g_waiter_reserved = waiter->next;
     }
     else
     {
@@ -201,11 +229,14 @@ static void release_waiter(futex_waiter *waiter)
     waiter->next = g_waiter_free;
     g_waiter_free = waiter;
 
+exit:
     sceKernelUnlockLwMutex(&g_waiter_lock, 1);
 }
 
 static int do_futex_wait(int *uaddr, int val, const struct timespec *timeout)
 {
+    static int wait_num = 0;
+
     unsigned int *wait = NULL;
     unsigned int wait_us = 0;
 
@@ -215,56 +246,61 @@ static int do_futex_wait(int *uaddr, int val, const struct timespec *timeout)
         wait = &wait_us;
     }
 
-    sceClibPrintf("doing wait on 0x%08X, got timeout: %us\n", uaddr, wait_us);
+    int id = wait_num++;
+    //sceClibPrintf("(%i) doing wait on 0x%08X, got timeout: %us\n", id, uaddr, wait_us);
 
     uaddr_entry *entry = get_or_create_entry(uaddr);
+
+    if (a_ll(uaddr) != val)
+    {
+        sceKernelUnlockLwMutex(&entry->lock, 1);
+        return -EAGAIN;
+    }
+
     futex_waiter *waiter = reserve_waiter();
 
-    sceKernelLockLwMutex(&entry->lock, 1, NULL);
-
+    //sceClibPrintf("(%i) got wait - waiter 0x%08X\n", id, waiter);
     futex_waiter *end = NULL;
     futex_waiter *q = entry->waiters;
 
     while (q)
     {
         end = q;
-        q = q->next;
+        q = q->next_queue;
     }
 
     // add to end of queue
-    futex_waiter **endq = (end) ? (&end->next) : (&entry->waiters);
+    futex_waiter **endq = (end) ? (&end->next_queue) : (&entry->waiters);
     *endq = waiter;
 
     sceKernelUnlockLwMutex(&entry->lock, 1);
 
     int res = sceKernelWaitSema(waiter->lock, 1, wait);
-    sceClibPrintf("done lock on 0x%08X, res = 0x%08X\n", waiter->lock, res);
+    //sceClibPrintf("(%i) done lock on 0x%08X, res = 0x%08X\n", id, waiter->lock, res);
     // TODO: handle errors appropriately
     return 0;
 }
 
+static int g_call_count = 0;
+
 static int do_futex_wake(int *uaddr, unsigned int val)
 {
-    sceClibPrintf("doing wake on 0x%08X, %u\n", uaddr, val);
+    //sceClibPrintf("doing wake on 0x%08X, %u\n", uaddr, val);
     uaddr_entry *entry = get_or_create_entry(uaddr);
 
     unsigned int woken = 0;
-
-    sceKernelLockLwMutex(&entry->lock, 1, NULL);
 
     futex_waiter *waiter = entry->waiters;
 
     for (woken = 0; woken < val && waiter; ++woken)
     {
         int res = sceKernelSignalSema(waiter->lock, 1);
-        sceClibPrintf("woken up: 0x%08X -> 0x%08X\n", waiter->lock, res);
-        futex_waiter *next = waiter->next;
-        release_waiter(waiter);
+        futex_waiter *next = waiter->next_queue;
+        release_waiter(waiter, entry);
         waiter = next;
     }
 
     entry->waiters = waiter;
-    sceKernelUnlockLwMutex(&entry->lock, 1);
     try_release_entry(entry);
 
     return woken;
@@ -273,7 +309,8 @@ static int do_futex_wake(int *uaddr, unsigned int val)
 int __vita_futex(int *uaddr, int futex_op, int val, const struct timespec *timeout, int *uaddr2, int val3)
 {
     // remove futex private
-    futex_op -= FUTEX_PRIVATE;
+    if (futex_op & FUTEX_PRIVATE)
+        futex_op &= ~FUTEX_PRIVATE;
 
     switch (futex_op)
     {
@@ -282,7 +319,7 @@ int __vita_futex(int *uaddr, int futex_op, int val, const struct timespec *timeo
     case FUTEX_WAKE:
         return do_futex_wake(uaddr, val);
     default:
-        sceClibPrintf("musl: UNSUPPORTED FUTEX OP %i\n", futex_op);
+        //sceClibPrintf("musl: UNSUPPORTED FUTEX OP %i\n", futex_op);
         break;
     }
 

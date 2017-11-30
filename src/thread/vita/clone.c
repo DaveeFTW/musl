@@ -3,6 +3,8 @@
 #include <psp2/kernel/clib.h>
 
 #define _GNU_SOURCE
+#include "vita_pthread.h"
+
 #include <stdio.h>
 #include <errno.h>
 #include <sched.h>
@@ -105,7 +107,7 @@ int __clone(int (*func)(void *), void *stack, int flags, void *arg, pid_t *ptid,
 
     if (flags & CLONE_CHILD_CLEARTID)
     {
-        sceClibPrintf("## MUSL: TODO: CLONE_CHILD_CLEARTID\n");
+        set_pthread_clear_child_tid(ctid);
     }
 
     // CLONE_DETACHED is a no-op

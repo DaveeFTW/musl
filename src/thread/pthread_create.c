@@ -41,6 +41,15 @@ _Noreturn void __pthread_exit(void *result)
 
 	__pthread_tsd_run_dtors();
 
+
+#if defined(__vita__)
+        if (self->clear_child_tid)
+        {
+            *self->clear_child_tid = 0;
+            __syscall_cp(SYS_futex, self->clear_child_tid, FUTEX_WAKE, 1, NULL, NULL, 0);
+        }
+#endif
+
 	__lock(self->exitlock);
 
 	/* Mark this thread dead before decrementing count */
@@ -269,7 +278,7 @@ int __pthread_create(pthread_t *restrict res, const pthread_attr_t *restrict att
 	new->stack_size = stack - stack_limit;
 	new->start = entry;
 	new->start_arg = arg;
-	new->self = new;
+        new->self = new;
 	new->tsd = (void *)tsd;
 	new->locale = &libc.global_locale;
 	if (attr._a_detach) {
@@ -286,6 +295,8 @@ int __pthread_create(pthread_t *restrict res, const pthread_attr_t *restrict att
 
 #if defined(__vita__)
         new->waiter_lock = sceKernelCreateSema("musl-waiter-thrd", 0, 0, 1, NULL);
+        new->set_child_tid = NULL;
+        new->clear_child_tid = NULL;
 #endif
 
 	a_inc(&libc.threads_minus_1);

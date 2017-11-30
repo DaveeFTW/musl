@@ -28,6 +28,8 @@
 #include "futex.h"
 #include "getdents.h"
 
+#include "pthread_impl.h"
+
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/kernel/processmgr.h>
 #include <psp2/kernel/clib.h>
@@ -52,11 +54,9 @@ int __vita_syscall_interp(int n, int r1, int r2, int r3, int r4, int r5, int r6)
     case SYS_getegid32:
     case SYS_getpid:
         return sceKernelGetProcessId();
-    // TODO: implement complete functionality
-    // currently our implementation ignores the
-    // tidptr parameter passed.
-    // for this implementation it seems harmless
     case SYS_set_tid_address:
+        __pthread_self()->clear_child_tid = (int *)r1;
+        return sceKernelGetThreadId();
     case SYS_gettid:
         return sceKernelGetThreadId();
     case SYS_tkill:
