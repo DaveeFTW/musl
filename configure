@@ -341,6 +341,7 @@ tryflag CFLAGS_C99FSE -ffreestanding \
 tryflag CFLAGS_C99FSE -fexcess-precision=standard \
 || { test "$ARCH" = i386 && tryflag CFLAGS_C99FSE -ffloat-store ; }
 tryflag CFLAGS_C99FSE -frounding-math
+tryflag CFLAGS_C99FSE -fno-optimize-sibling-calls
 
 #
 # We may use the may_alias attribute if __GNUC__ is defined, so
