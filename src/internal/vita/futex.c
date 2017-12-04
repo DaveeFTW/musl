@@ -122,7 +122,7 @@ static uaddr_entry *get_or_create_entry(int *uaddr)
     }
 
     reserved->count++;
-    int res = sceKernelTryLockLwMutex(&reserved->lock, 1, NULL);
+    int res = sceKernelTryLockLwMutex(&reserved->lock, 1);
     sceKernelUnlockLwMutex(&g_uaddr_lock, 1);
 
     if (res < 0)
